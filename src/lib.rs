@@ -1,28 +1,14 @@
 #[derive(PartialEq, Debug, Copy, Clone)]
 struct PvInvalid;
 
-#[derive(PartialEq, Debug, Copy, Clone)]
-struct PvNull;
-
-#[derive(PartialEq, Debug, Copy, Clone)]
-struct PvBool(bool);
-
-#[derive(PartialEq, Debug, Copy, Clone)]
-struct PvInt(isize);
-
-#[derive(PartialEq, Debug, Clone)]
-enum Pv {
-    Invalid(PvInvalid),
-    Null(PvNull),
-    Bool(PvBool),
-    Int(PvInt),
-}
-
 impl PvInvalid {
     pub fn new() -> Self {
         PvInvalid
     }
 }
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+struct PvNull;
 
 impl PvNull {
     pub fn new() -> Self {
@@ -30,11 +16,17 @@ impl PvNull {
     }
 }
 
+#[derive(PartialEq, Debug, Copy, Clone)]
+struct PvBool(bool);
+
 impl PvBool {
     pub fn new(value: bool) -> Self {
         PvBool(value)
     }
 }
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+struct PvInt(isize);
 
 impl PvInt {
     pub fn new(value: isize) -> Self {
@@ -80,6 +72,14 @@ impl std::ops::Rem for PvInt {
     fn rem(self, other: PvInt) -> Self {
         PvInt(self.0 % other.0)
     }
+}
+
+#[derive(PartialEq, Debug, Clone)]
+enum Pv {
+    Invalid(PvInvalid),
+    Null(PvNull),
+    Bool(PvBool),
+    Int(PvInt),
 }
 
 impl Pv {
