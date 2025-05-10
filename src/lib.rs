@@ -1,16 +1,16 @@
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 struct PvInvalid;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 struct PvNull;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 struct PvBool(bool);
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 struct PvInt(isize);
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Clone)]
 enum Pv {
     Invalid(PvInvalid),
     Null(PvNull),
@@ -100,6 +100,30 @@ impl Pv {
     }
 }
 
+impl From<PvInvalid> for Pv {
+    fn from(value: PvInvalid) -> Self {
+        Pv::Invalid(value)
+    }
+}
+
+impl From<PvNull> for Pv {
+    fn from(value: PvNull) -> Self {
+        Pv::Null(value)
+    }
+}
+
+impl From<PvBool> for Pv {
+    fn from(value: PvBool) -> Self {
+        Pv::Bool(value)
+    }
+}
+
+impl From<PvInt> for Pv {
+    fn from(value: PvInt) -> Self {
+        Pv::Int(value)
+    }
+}
+
 impl From<bool> for Pv {
     fn from(value: bool) -> Self {
         Pv::bool(value)
@@ -121,6 +145,61 @@ impl<T: Into<Pv>> From<Option<T>> for Pv {
     }
 }
 
+impl std::ops::Add for Pv {
+    type Output = Self;
+
+    fn add(self, other: Pv) -> Self {
+        match (self, other) {
+            (Pv::Int(v1), Pv::Int(v2)) => (v1 + v2).into(),
+            _ => Pv::invalid(),
+        }
+    }
+}
+
+impl std::ops::Sub for Pv {
+    type Output = Self;
+
+    fn sub(self, other: Pv) -> Self {
+        match (self, other) {
+            (Pv::Int(v1), Pv::Int(v2)) => (v1 - v2).into(),
+            _ => Pv::invalid(),
+        }
+    }
+}
+
+impl std::ops::Mul for Pv {
+    type Output = Self;
+
+    fn mul(self, other: Pv) -> Self {
+        match (self, other) {
+            (Pv::Int(v1), Pv::Int(v2)) => (v1 * v2).into(),
+            _ => Pv::invalid(),
+        }
+    }
+}
+
+impl std::ops::Div for Pv {
+    type Output = Self;
+
+    fn div(self, other: Pv) -> Self {
+        match (self, other) {
+            (Pv::Int(v1), Pv::Int(v2)) => (v1 / v2).into(),
+            _ => Pv::invalid(),
+        }
+    }
+}
+
+impl std::ops::Rem for Pv {
+    type Output = Self;
+
+    fn rem(self, other: Pv) -> Self {
+        match (self, other) {
+            (Pv::Int(v1), Pv::Int(v2)) => (v1 % v2).into(),
+            _ => Pv::invalid(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,37 +207,31 @@ mod tests {
     // the most pointless tests known to mankind
     #[test]
     fn test_invalid() {
-        let val = Pv::invalid();
-        match val {
-            Pv::Invalid(_) => println!("ok"),
-            _ => panic!("Expected Pv::Invalid"),
-        }
+        assert_eq!(Pv::invalid(), Pv::Invalid(PvInvalid));
     }
 
     #[test]
     fn test_null() {
-        let val = Pv::null();
-        match val {
-            Pv::Null(_) => println!("ok"),
-            _ => panic!("Expected Pv::Null"),
-        }
+        assert_eq!(Pv::null(), Pv::Null(PvNull));
     }
 
     #[test]
     fn test_bool() {
-        let val = Pv::bool(true);
-        match val {
-            Pv::Bool(PvBool(true)) => println!("ok"),
-            _ => panic!("Expected Pv::Bool(PvBool(true))"),
-        }
+        assert_eq!(Pv::bool(true), Pv::Bool(PvBool(true)));
     }
 
     #[test]
     fn test_int() {
-        let val = Pv::int(15);
-        match val {
-            Pv::Int(PvInt(15)) => println!("ok"),
-            _ => panic!("Expected Pv::Int(PvInt(15))"),
-        }
+        assert_eq!(Pv::int(15), Pv::Int(PvInt(15)));
+    }
+
+    #[test]
+    fn test_int_add() {
+        assert_eq!(Pv::int(15) + Pv::int(3), Pv::int(18));
+    }
+
+    #[test]
+    fn test_add_invalid() {
+        assert_eq!(Pv::int(15) + Pv::bool(true), Pv::invalid());
     }
 }
