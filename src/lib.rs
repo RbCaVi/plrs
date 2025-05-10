@@ -74,12 +74,18 @@ impl std::ops::Rem for PvInt {
     }
 }
 
+#[derive(Debug, Clone)]
+struct PvString {
+    data: *mut PvStringData,
+}
+
 #[derive(PartialEq, Debug, Clone)]
 enum Pv {
     Invalid(PvInvalid),
     Null(PvNull),
     Bool(PvBool),
     Int(PvInt),
+    String(PvString),
 }
 
 impl Pv {
