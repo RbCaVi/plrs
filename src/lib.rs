@@ -34,42 +34,42 @@ impl PvInt {
     }
 }
 
-impl std::ops::Add for PvInt {
+impl std::ops::Add<&PvInt> for PvInt {
     type Output = Self;
 
-    fn add(self, other: PvInt) -> Self {
+    fn add(self, other: &PvInt) -> Self {
         PvInt(self.0 + other.0)
     }
 }
 
-impl std::ops::Sub for PvInt {
+impl std::ops::Sub<&PvInt> for PvInt {
     type Output = Self;
 
-    fn sub(self, other: PvInt) -> Self {
+    fn sub(self, other: &PvInt) -> Self {
         PvInt(self.0 - other.0)
     }
 }
 
-impl std::ops::Mul for PvInt {
+impl std::ops::Mul<&PvInt> for PvInt {
     type Output = Self;
 
-    fn mul(self, other: PvInt) -> Self {
+    fn mul(self, other: &PvInt) -> Self {
         PvInt(self.0 * other.0)
     }
 }
 
-impl std::ops::Div for PvInt {
+impl std::ops::Div<&PvInt> for PvInt {
     type Output = Self;
 
-    fn div(self, other: PvInt) -> Self {
+    fn div(self, other: &PvInt) -> Self {
         PvInt(self.0 / other.0)
     }
 }
 
-impl std::ops::Rem for PvInt {
+impl std::ops::Rem<&PvInt> for PvInt {
     type Output = Self;
 
-    fn rem(self, other: PvInt) -> Self {
+    fn rem(self, other: &PvInt) -> Self {
         PvInt(self.0 % other.0)
     }
 }
@@ -279,10 +279,10 @@ impl<T: Into<Pv>> From<Option<T>> for Pv {
     }
 }
 
-impl std::ops::Add for Pv {
+impl std::ops::Add<&Pv> for Pv {
     type Output = Self;
 
-    fn add(self, other: Pv) -> Self {
+    fn add(self, other: &Pv) -> Self {
         match (self, other) {
             (Pv::Int(v1), Pv::Int(v2)) => (v1 + v2).into(),
             _ => Pv::invalid(),
@@ -290,10 +290,10 @@ impl std::ops::Add for Pv {
     }
 }
 
-impl std::ops::Sub for Pv {
+impl std::ops::Sub<&Pv> for Pv {
     type Output = Self;
 
-    fn sub(self, other: Pv) -> Self {
+    fn sub(self, other: &Pv) -> Self {
         match (self, other) {
             (Pv::Int(v1), Pv::Int(v2)) => (v1 - v2).into(),
             _ => Pv::invalid(),
@@ -301,10 +301,10 @@ impl std::ops::Sub for Pv {
     }
 }
 
-impl std::ops::Mul for Pv {
+impl std::ops::Mul<&Pv> for Pv {
     type Output = Self;
 
-    fn mul(self, other: Pv) -> Self {
+    fn mul(self, other: &Pv) -> Self {
         match (self, other) {
             (Pv::Int(v1), Pv::Int(v2)) => (v1 * v2).into(),
             _ => Pv::invalid(),
@@ -312,10 +312,10 @@ impl std::ops::Mul for Pv {
     }
 }
 
-impl std::ops::Div for Pv {
+impl std::ops::Div<&Pv> for Pv {
     type Output = Self;
 
-    fn div(self, other: Pv) -> Self {
+    fn div(self, other: &Pv) -> Self {
         match (self, other) {
             (Pv::Int(v1), Pv::Int(v2)) => (v1 / v2).into(),
             _ => Pv::invalid(),
@@ -323,16 +323,42 @@ impl std::ops::Div for Pv {
     }
 }
 
-impl std::ops::Rem for Pv {
+impl std::ops::Rem<&Pv> for Pv {
     type Output = Self;
 
-    fn rem(self, other: Pv) -> Self {
+    fn rem(self, other: &Pv) -> Self {
         match (self, other) {
             (Pv::Int(v1), Pv::Int(v2)) => (v1 % v2).into(),
             _ => Pv::invalid(),
         }
     }
 }
+
+macro_rules! unref_op_impl {
+    ($type1:ident $type2:ident $optrait:ident $op:ident) => {
+        impl std::ops::$optrait<$type2> for $type1 {
+            // i feel like the 'static lifetime is not a good idea
+            // but i can't put an "unconstrained lifetime" to use instead
+            type Output = <$type1 as std::ops::$optrait<&'static $type2>>::Output;
+
+            fn $op(self, other: $type2) -> Self::Output {
+                self.$op(&other)
+            }
+        }
+    }
+}
+
+unref_op_impl!(Pv Pv Add add);
+unref_op_impl!(Pv Pv Sub sub);
+unref_op_impl!(Pv Pv Mul mul);
+unref_op_impl!(Pv Pv Div div);
+unref_op_impl!(Pv Pv Rem rem);
+
+unref_op_impl!(PvInt PvInt Add add);
+unref_op_impl!(PvInt PvInt Sub sub);
+unref_op_impl!(PvInt PvInt Mul mul);
+unref_op_impl!(PvInt PvInt Div div);
+unref_op_impl!(PvInt PvInt Rem rem);
 
 #[cfg(test)]
 mod tests {
