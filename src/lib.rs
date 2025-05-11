@@ -34,45 +34,23 @@ impl PvInt {
     }
 }
 
-impl std::ops::Add<&PvInt> for PvInt {
-    type Output = Self;
+macro_rules! pvint_op_impl {
+    ($optrait:ident $op:ident) => {
+        impl std::ops::$optrait<&PvInt> for PvInt {
+            type Output = Self;
 
-    fn add(self, other: &PvInt) -> Self {
-        PvInt(self.0 + other.0)
+            fn $op(self, other: &PvInt) -> Self {
+                PvInt(self.0.$op(other.0))
+            }
+        }
     }
 }
 
-impl std::ops::Sub<&PvInt> for PvInt {
-    type Output = Self;
-
-    fn sub(self, other: &PvInt) -> Self {
-        PvInt(self.0 - other.0)
-    }
-}
-
-impl std::ops::Mul<&PvInt> for PvInt {
-    type Output = Self;
-
-    fn mul(self, other: &PvInt) -> Self {
-        PvInt(self.0 * other.0)
-    }
-}
-
-impl std::ops::Div<&PvInt> for PvInt {
-    type Output = Self;
-
-    fn div(self, other: &PvInt) -> Self {
-        PvInt(self.0 / other.0)
-    }
-}
-
-impl std::ops::Rem<&PvInt> for PvInt {
-    type Output = Self;
-
-    fn rem(self, other: &PvInt) -> Self {
-        PvInt(self.0 % other.0)
-    }
-}
+pvint_op_impl!(Add add);
+pvint_op_impl!(Sub sub);
+pvint_op_impl!(Mul mul);
+pvint_op_impl!(Div div);
+pvint_op_impl!(Rem rem);
 
 #[derive(Copy, Clone)]
 struct PvStringData {
@@ -272,35 +250,21 @@ impl Pv {
     }
 }
 
-impl From<PvInvalid> for Pv {
-    fn from(value: PvInvalid) -> Self {
-        Pv::Invalid(value)
+macro_rules! pvfrom {
+    ($item:ident $type:ident) => {
+        impl From<$type> for Pv {
+            fn from(value: $type) -> Self {
+                Pv::$item(value)
+            }
+        }
     }
 }
 
-impl From<PvNull> for Pv {
-    fn from(value: PvNull) -> Self {
-        Pv::Null(value)
-    }
-}
-
-impl From<PvBool> for Pv {
-    fn from(value: PvBool) -> Self {
-        Pv::Bool(value)
-    }
-}
-
-impl From<PvInt> for Pv {
-    fn from(value: PvInt) -> Self {
-        Pv::Int(value)
-    }
-}
-
-impl From<PvString> for Pv {
-    fn from(value: PvString) -> Self {
-        Pv::String(value)
-    }
-}
+pvfrom!(Invalid PvInvalid);
+pvfrom!(Null PvNull);
+pvfrom!(Bool PvBool);
+pvfrom!(Int PvInt);
+pvfrom!(String PvString);
 
 impl From<bool> for Pv {
     fn from(value: bool) -> Self {
