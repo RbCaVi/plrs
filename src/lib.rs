@@ -52,6 +52,17 @@ pvint_op_impl!(Mul mul);
 pvint_op_impl!(Div div);
 pvint_op_impl!(Rem rem);
 
+macro_rules! decref {
+    ($pv:expr) => (unsafe {
+        (*$pv.data).refcount -= 1;
+        (*$pv.data).refcount
+    } == 0)
+}
+
+macro_rules! incref {
+    ($pv:expr) => (unsafe {(*$pv.data).refcount += 1})
+}
+
 #[derive(Copy, Clone)]
 struct PvStringData {
     refcount: usize,
@@ -64,20 +75,21 @@ struct PvString {
     data: *mut PvStringData,
 }
 
-fn get_string_layout(size: usize) -> std::alloc::Layout {
-    let layout = std::alloc::Layout::new::<PvStringData>();
-    // no errors need to be handled
-    // the total size does not overflow isize (i'm assuming this one)
-    let (layout, _) = layout.extend(
-        // align (1) is not zero
-        // align (1) is a power of two
-        // size (size) does not overflow isize when rounded up to align (i'm assuming this one)
-        std::alloc::Layout::from_size_align(size, 1).unwrap()
-    ).unwrap();
-    layout
-}
-
 impl PvString {
+    // get a Layout that fits a PvStringData with `size` bytes after it
+    fn get_layout(size: usize) -> std::alloc::Layout {
+        let layout = std::alloc::Layout::new::<PvStringData>();
+        // no errors need to be handled
+        // the total size does not overflow isize (i'm assuming this one)
+        let (layout, _) = layout.extend(
+            // align (1) is not zero
+            // align (1) is a power of two
+            // size (size) does not overflow isize when rounded up to align (i'm assuming this one)
+            std::alloc::Layout::from_size_align(size, 1).unwrap()
+        ).unwrap();
+        layout
+    }
+
     // allocates enough space for `len` bytes of string
     pub fn new_empty_sized(size: usize) -> Self {
         let layout = get_string_layout(size);
@@ -180,17 +192,6 @@ impl PvString {
     }
 }
 
-macro_rules! decref {
-    ($pv:expr) => (unsafe {
-        (*$pv.data).refcount -= 1;
-        (*$pv.data).refcount
-    } == 0)
-}
-
-macro_rules! incref {
-    ($pv:expr) => (unsafe {(*$pv.data).refcount += 1})
-}
-
 impl Drop for PvString {
     fn drop(&mut self) {
         if (decref!(self)) {
@@ -249,22 +250,6 @@ impl Pv {
         Pv::Int(PvInt::new(value))
     }
 }
-
-macro_rules! pvfrom {
-    ($item:ident $type:ident) => {
-        impl From<$type> for Pv {
-            fn from(value: $type) -> Self {
-                Pv::$item(value)
-            }
-        }
-    }
-}
-
-pvfrom!(Invalid PvInvalid);
-pvfrom!(Null PvNull);
-pvfrom!(Bool PvBool);
-pvfrom!(Int PvInt);
-pvfrom!(String PvString);
 
 impl From<bool> for Pv {
     fn from(value: bool) -> Self {
@@ -342,6 +327,22 @@ impl std::ops::Rem<&Pv> for Pv {
         }
     }
 }
+
+macro_rules! pvfrom {
+    ($item:ident $type:ident) => {
+        impl From<$type> for Pv {
+            fn from(value: $type) -> Self {
+                Pv::$item(value)
+            }
+        }
+    }
+}
+
+pvfrom!(Invalid PvInvalid);
+pvfrom!(Null PvNull);
+pvfrom!(Bool PvBool);
+pvfrom!(Int PvInt);
+pvfrom!(String PvString);
 
 macro_rules! unref_op_impl {
     ($type1:ident $type2:ident $optrait:ident $op:ident) => {
