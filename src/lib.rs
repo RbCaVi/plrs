@@ -116,35 +116,43 @@ impl PvString {
     }
 
     pub fn new(str: &str) -> Self {
-        let out = PvString::new_empty_sized(str.len());
+        let out = PvString::new_empty_sized(str.len() * 2); // any >= str.len()
         unsafe {
             (*out.data).len = str.len();
-            out.get_data_mut().copy_from_slice(str.as_bytes());
         }
+        out.get_data_mut().copy_from_slice(str.as_bytes());
         out
     }
 
-    // allocates enough space for `len` bytes of string
-    unsafe fn resize(mut self, newsize: usize) {
+    // move one copy of this string out and resize its allocation
+    // will reuse the old allocation if possible
+    unsafe fn resize_move(mut self, newsize: usize) -> Self {
         let data = *self.data;
 
-        assert!(data.refcount == 1); // just a suggestion
-        assert!(newsize >= data.len); // just a suggestion
+        if data.refcount == 1 {
+            assert!(newsize >= data.len); // just a suggestion
 
-        let oldlayout = get_string_layout(data.alloc_size);
+            let oldlayout = get_string_layout(data.alloc_size);
 
-        let newlayout = get_string_layout(newsize);
-        
-        self.data = std::alloc::realloc(self.data as *mut u8, oldlayout, newlayout.size()) as *mut PvStringData;
+            let newlayout = get_string_layout(newsize);
+            
+            self.data = std::alloc::realloc(self.data as *mut u8, oldlayout, newlayout.size()) as *mut PvStringData;
 
-        (*self.data).alloc_size = newsize;
+            (*self.data).alloc_size = newsize;
+
+            self
+        } else {
+            let out = PvString::new_empty_sized(newsize);
+            (*out.data).len = data.len;
+            out.get_data_mut().copy_from_slice(self.get_data_mut());
+            out
+        }
     }
 
+    // get a mutable slice reference to the string data
     // only use when refcount = 1
-    unsafe fn get_data_mut(&self) -> &mut [u8] {
+    fn get_data_mut(&self) -> &mut [u8] {
         let data = unsafe {*self.data};
-
-        assert!(data.refcount == 1); // just a suggestion
 
         let layout = std::alloc::Layout::new::<PvStringData>();
         // no errors need to be handled
@@ -158,17 +166,39 @@ impl PvString {
         // i could probably just get the size of layout
         // but just to be safe :)
 
-        std::slice::from_raw_parts_mut(
-            (self.data as *mut u8).add(offset),
-            data.len
-        )
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                (self.data as *mut u8).add(offset),
+                data.len
+            )
+        }
     }
 
     // get an immutable reference to the string data
     // only use when refcount = 1
-    pub fn get_str(&self) -> &str {
+    fn get_str(&self) -> &str {
         // maybe use std::str::from_utf8_unchecked()?
-        unsafe {std::str::from_utf8(self.get_data_mut()).unwrap()}
+        // (because the "only" way to get a PvString is from a &str)
+        std::str::from_utf8(self.get_data_mut()).unwrap()
+    }
+
+    pub fn concat(self, other: &PvString) -> Self {
+        let data = unsafe {*self.data};
+        let otherdata = unsafe {*other.data};
+
+        let s = if data.refcount == 1 && data.alloc_size >= data.len + otherdata.len {
+            self
+        } else {unsafe {
+            self.resize_move((data.len + otherdata.len) * 2)
+        }};
+
+        unsafe {
+            (*s.data).len += otherdata.len;
+        }
+
+        s.get_data_mut()[data.len..].copy_from_slice(other.get_data_mut());
+
+        s
     }
 }
 
@@ -364,7 +394,7 @@ unref_op_impl!(PvInt PvInt Rem rem);
 mod tests {
     use super::*;
 
-    // the most pointless tests known to mankind
+    // these four are the most pointless tests known to mankind
     #[test]
     fn test_invalid() {
         assert_eq!(Pv::invalid(), Pv::Invalid(PvInvalid));
@@ -385,6 +415,7 @@ mod tests {
         assert_eq!(Pv::int(15), Pv::Int(PvInt(15)));
     }
 
+    // real stuff
     #[test]
     fn test_int_add() {
         assert_eq!(Pv::int(15) + Pv::int(3), Pv::int(18));
@@ -401,6 +432,11 @@ mod tests {
     }
 
     #[test]
+    fn test_str_empty_eq() {
+        assert_eq!(PvString::new_empty(), PvString::new_empty());
+    }
+
+    #[test]
     fn test_str_constructor() {
         PvString::new("string");
     }
@@ -408,5 +444,34 @@ mod tests {
     #[test]
     fn test_str_eq() {
         assert_eq!(PvString::new("string"), PvString::new("string"));
+    }
+
+    #[test]
+    fn test_str_concat() {
+        assert_eq!(PvString::new("string").concat(&PvString::new("STRING")), PvString::new("stringSTRING"));
+    }
+
+    #[test]
+    fn test_str_concat_unchanged() {
+        let a = PvString::new("string");
+        let b = PvString::new("STRING");
+        assert_eq!(a.clone().concat(&b), PvString::new("stringSTRING"));
+        assert_eq!(a, PvString::new("string"));
+        assert_eq!(b, PvString::new("STRING"));
+    }
+
+    // use the PvString::resize_move() path
+    #[test]
+    fn test_str_concat2() {
+        assert_eq!(PvString::new("s").concat(&PvString::new("STRING")), PvString::new("sSTRING"));
+    }
+
+    #[test]
+    fn test_str_concat_unchanged2() {
+        let a = PvString::new("s");
+        let b = PvString::new("STRING");
+        assert_eq!(a.clone().concat(&b), PvString::new("sSTRING"));
+        assert_eq!(a, PvString::new("s"));
+        assert_eq!(b, PvString::new("STRING"));
     }
 }
