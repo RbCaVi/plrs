@@ -533,6 +533,10 @@ unref_op_impl!(PvInt PvInt Mul mul);
 unref_op_impl!(PvInt PvInt Div div);
 unref_op_impl!(PvInt PvInt Rem rem);
 
+unref_op_impl!(PvString PvString Add add);
+
+unref_op_impl!(PvArray PvArray Add add);
+
 #[cfg(test)]
 mod tests {
     use super::*;
