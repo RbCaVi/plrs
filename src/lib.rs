@@ -237,6 +237,14 @@ impl PartialEq for PvString {
     }
 }
 
+impl std::ops::Add<&PvString> for PvString {
+    type Output = Self;
+
+    fn add(self, other: &PvString) -> Self {
+        self.concat(other)
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 enum Pv {
     Invalid(PvInvalid),
@@ -288,6 +296,12 @@ impl From<PvInt> for Pv {
     }
 }
 
+impl From<PvString> for Pv {
+    fn from(value: PvString) -> Self {
+        Pv::String(value)
+    }
+}
+
 impl From<bool> for Pv {
     fn from(value: bool) -> Self {
         Pv::bool(value)
@@ -315,6 +329,7 @@ impl std::ops::Add<&Pv> for Pv {
     fn add(self, other: &Pv) -> Self {
         match (self, other) {
             (Pv::Int(v1), Pv::Int(v2)) => (v1 + v2).into(),
+            (Pv::String(v1), Pv::String(v2)) => (v1 + v2).into(),
             _ => Pv::invalid(),
         }
     }
