@@ -92,7 +92,7 @@ impl PvString {
 
     // allocates enough space for `len` bytes of string
     pub fn new_empty_sized(size: usize) -> Self {
-        let layout = get_string_layout(size);
+        let layout = PvString::get_layout(size);
 
         let data = unsafe {std::alloc::alloc(layout)} as *mut PvStringData;
 
@@ -122,9 +122,9 @@ impl PvString {
         if data.refcount == 1 {
             assert!(newsize >= data.len); // just a suggestion
 
-            let oldlayout = get_string_layout(data.alloc_size);
+            let oldlayout = PvString::get_layout(data.alloc_size);
 
-            let newlayout = get_string_layout(newsize);
+            let newlayout = PvString::get_layout(newsize);
             
             self.data = std::alloc::realloc(self.data as *mut u8, oldlayout, newlayout.size()) as *mut PvStringData;
 
@@ -196,7 +196,7 @@ impl Drop for PvString {
     fn drop(&mut self) {
         if (decref!(self)) {
             let size = unsafe {(*self.data).alloc_size};
-            let layout = get_string_layout(size);
+            let layout = PvString::get_layout(size);
 
             unsafe {std::alloc::dealloc(self.data as *mut u8, layout);}
         }
@@ -253,7 +253,7 @@ impl PvArray {
 
     // allocates enough space for `len` bytes of string
     pub fn new_empty_sized(size: usize) -> Self {
-        let layout = get_string_layout(size);
+        let layout = PvArray::get_layout(size);
 
         let data = unsafe {std::alloc::alloc(layout)} as *mut PvArrayData;
 
@@ -283,9 +283,9 @@ impl PvArray {
         if data.refcount == 1 {
             assert!(newsize >= data.len); // just a suggestion
 
-            let oldlayout = get_string_layout(data.alloc_size);
+            let oldlayout = PvArray::get_layout(data.alloc_size);
 
-            let newlayout = get_string_layout(newsize);
+            let newlayout = PvArray::get_layout(newsize);
             
             self.data = std::alloc::realloc(self.data as *mut u8, oldlayout, newlayout.size()) as *mut PvArrayData;
 
@@ -357,7 +357,7 @@ impl Drop for PvArray {
     fn drop(&mut self) {
         if (decref!(self)) {
             let size = unsafe {(*self.data).alloc_size};
-            let layout = get_string_layout(size);
+            let layout = PvArray::get_layout(size);
 
             unsafe {std::alloc::dealloc(self.data as *mut u8, layout);}
         }
