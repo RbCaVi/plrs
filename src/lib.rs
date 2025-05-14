@@ -25,12 +25,24 @@ impl PvBool {
     }
 }
 
+impl From<bool> for PvBool {
+    fn from(value: bool) -> Self {
+        PvBool::new(value)
+    }
+}
+
 #[derive(PartialEq, Debug, Copy, Clone)]
 struct PvInt(isize);
 
 impl PvInt {
     pub fn new(value: isize) -> Self {
         PvInt(value)
+    }
+}
+
+impl From<isize> for PvInt {
+    fn from(value: isize) -> Self {
+        PvInt::new(value)
     }
 }
 
@@ -216,6 +228,12 @@ impl PartialEq for PvString {
     }
 }
 
+impl From<&str> for PvString {
+    fn from(value: &str) -> Self {
+        PvString::new(value)
+    }
+}
+
 impl std::ops::Add<&PvString> for PvString {
     type Output = Self;
 
@@ -390,6 +408,12 @@ impl PartialEq for PvArray {
     }
 }
 
+impl From<&[Pv]> for PvArray {
+    fn from(value: &[Pv]) -> Self {
+        PvArray::new(value)
+    }
+}
+
 impl std::ops::Add<&PvArray> for PvArray {
     type Output = Self;
 
@@ -423,18 +447,6 @@ impl Pv {
     
     pub fn int(value: isize) -> Self {
         Pv::Int(PvInt::new(value))
-    }
-}
-
-impl From<bool> for Pv {
-    fn from(value: bool) -> Self {
-        Pv::bool(value)
-    }
-}
-
-impl From<isize> for Pv {
-    fn from(value: isize) -> Self {
-        Pv::int(value)
     }
 }
 
@@ -504,7 +516,7 @@ impl std::ops::Rem<&Pv> for Pv {
 }
 
 macro_rules! pvfrom {
-    ($item:ident $type:ident) => {
+    ($item:ident, $type:ty) => {
         impl From<$type> for Pv {
             fn from(value: $type) -> Self {
                 Pv::$item(value)
@@ -513,12 +525,26 @@ macro_rules! pvfrom {
     }
 }
 
-pvfrom!(Invalid PvInvalid);
-pvfrom!(Null PvNull);
-pvfrom!(Bool PvBool);
-pvfrom!(Int PvInt);
-pvfrom!(String PvString);
-pvfrom!(Array PvArray);
+macro_rules! pvfromtrans {
+    ($type:ty, $intertype:ty) => {
+        impl From<$type> for Pv {
+            fn from(value: $type) -> Self {
+                <$type as Into<$intertype>>::into(value).into()
+            }
+        }
+    }
+}
+
+pvfrom!(Invalid, PvInvalid);
+pvfrom!(Null, PvNull);
+pvfrom!(Bool, PvBool);
+pvfromtrans!(bool, PvBool);
+pvfrom!(Int, PvInt);
+pvfromtrans!(isize, PvInt);
+pvfrom!(String, PvString);
+pvfromtrans!(&str, PvString);
+pvfrom!(Array, PvArray);
+pvfromtrans!(&[Pv], PvArray);
 
 macro_rules! unref_op_impl {
     ($type1:ident $type2:ident $optrait:ident $op:ident) => {
