@@ -82,7 +82,6 @@ struct PvStringData {
     alloc_size: usize,
 }
 
-#[derive(Debug)]
 struct PvString {
     data: *mut PvStringData,
 }
@@ -204,6 +203,17 @@ impl PvString {
     }
 }
 
+impl std::fmt::Debug for PvString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let data = unsafe {*self.data};
+        f.debug_struct("PvString")
+         .field("len", &data.len)
+         .field("alloc_size", &data.alloc_size)
+         .field("data", &self.get_str())
+         .finish()
+    }
+}
+
 impl Drop for PvString {
     fn drop(&mut self) {
         if (decref!(self)) {
@@ -249,7 +259,6 @@ struct PvArrayData {
     alloc_size: usize,
 }
 
-#[derive(Debug)]
 struct PvArray {
     data: *mut PvArrayData,
 }
@@ -393,6 +402,17 @@ impl PvArray {
         s.get_data_mut()[data.len].write(other.clone());
 
         s
+    }
+}
+
+impl std::fmt::Debug for PvArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let data = unsafe {*self.data};
+        f.debug_struct("PvArray")
+         .field("len", &data.len)
+         .field("alloc_size", &data.alloc_size)
+         .field("data", &self.get_data())
+         .finish()
     }
 }
 
