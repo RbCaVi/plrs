@@ -254,6 +254,16 @@ struct PvArray {
     data: *mut PvArrayData,
 }
 
+macro_rules! clone_to_uninit {
+    ($src:expr, $dst:expr, $offset:expr, $len:expr) => (
+        let src = $src;
+        let dst = $dst;
+        for i in 0..$len {
+            dst[$offset + i].write(src[i].clone());
+        }
+    )
+}
+
 impl PvArray {
     // get a Layout that fits a PvArrayData with `size` Pv's after it
     fn get_layout(size: usize) -> std::alloc::Layout {
@@ -289,7 +299,9 @@ impl PvArray {
         unsafe {
             (*out.data).len = pvs.len();
         }
-        out.get_data_mut().clone_from_slice(pvs);
+
+        clone_to_uninit!(pvs, out.get_data_mut(), 0, pvs.len());
+
         out
     }
 
@@ -313,14 +325,14 @@ impl PvArray {
         } else {
             let out = PvArray::new_empty_sized(newsize);
             (*out.data).len = data.len;
-            out.get_data_mut().clone_from_slice(self.get_data_mut());
+            clone_to_uninit!(self.get_data(), out.get_data_mut(), 0, data.len);
             out
         }
     }
 
     // get a mutable slice reference to the array data
     // only use when refcount = 1
-    fn get_data_mut(&self) -> &mut [Pv] {
+    fn get_data_mut(&self) -> &mut [std::mem::MaybeUninit<Pv>] {
         let data = unsafe {*self.data};
 
         let layout = std::alloc::Layout::new::<PvArrayData>();
@@ -334,7 +346,7 @@ impl PvArray {
 
         unsafe {
             std::slice::from_raw_parts_mut(
-                (self.data as *mut u8).add(offset) as *mut Pv,
+                (self.data as *mut u8).add(offset) as *mut std::mem::MaybeUninit<Pv>,
                 data.len
             )
         }
@@ -343,7 +355,7 @@ impl PvArray {
     // get an immutable reference to the array data
     // only use when refcount = 1
     fn get_data(&self) -> &[Pv] {
-        self.get_data_mut()
+        unsafe {std::mem::transmute::<_, _>(self.get_data_mut())}
     }
 
     pub fn concat(self, other: &PvArray) -> Self {
@@ -360,7 +372,7 @@ impl PvArray {
             (*s.data).len += otherdata.len;
         }
 
-        s.get_data_mut()[data.len..].clone_from_slice(other.get_data_mut());
+        clone_to_uninit!(other.get_data(), s.get_data_mut(), data.len, otherdata.len);
 
         s
     }
@@ -378,7 +390,7 @@ impl PvArray {
             (*s.data).len += 1;
         }
 
-        s.get_data_mut()[data.len] = other.clone();
+        s.get_data_mut()[data.len].write(other.clone());
 
         s
     }
@@ -389,6 +401,14 @@ impl Drop for PvArray {
         if (decref!(self)) {
             let size = unsafe {(*self.data).alloc_size};
             let layout = PvArray::get_layout(size);
+
+            for mval in self.get_data_mut() {
+                // take the value (run its destructor)
+                // std::mem::MaybeUninit::assume_init_read() instead of
+                // std::mem::MaybeUninit::assume_init() so it doesn't
+                // consume `mval`
+                unsafe {mval.assume_init_read();}
+            }
 
             unsafe {std::alloc::dealloc(self.data as *mut u8, layout);}
         }
@@ -673,40 +693,40 @@ mod tests {
 
     #[test]
     fn test_array_constructor() {
-        PvArray::new(["string"]);
+        PvArray::new(&["string".into()]);
     }
 
     #[test]
     fn test_array_eq() {
-        assert_eq!(PvArray::new("string"), PvArray::new("string"));
+        assert_eq!(PvArray::new(&["string".into()]), PvArray::new(&["string".into()]));
     }
 
     #[test]
     fn test_array_concat() {
-        assert_eq!(PvArray::new("string").concat(&PvArray::new("STRING")), PvArray::new("stringSTRING"));
+        assert_eq!(PvArray::new(&["string".into()]).concat(&PvArray::new(&["STRING".into()])), PvArray::new(&["string".into(), "STRING".into()]));
     }
 
     #[test]
     fn test_array_concat_unchanged() {
-        let a = PvArray::new("string");
-        let b = PvArray::new("STRING");
-        assert_eq!(a.clone().concat(&b), PvArray::new("stringSTRING"));
-        assert_eq!(a, PvArray::new("string"));
-        assert_eq!(b, PvArray::new("STRING"));
+        let a = PvArray::new(&["string".into()]);
+        let b = PvArray::new(&["STRING".into()]);
+        assert_eq!(a.clone().concat(&b), PvArray::new(&["string".into(), "STRING".into()]));
+        assert_eq!(a, PvArray::new(&["string".into()]));
+        assert_eq!(b, PvArray::new(&["STRING".into()]));
     }
 
     // use the PvArray::resize_move() path
     #[test]
     fn test_array_concat2() {
-        assert_eq!(PvArray::new("s").concat(&PvArray::new("STRING")), PvArray::new("sSTRING"));
+        assert_eq!(PvArray::new(&["s".into()]).concat(&PvArray::new(&["STRING".into()])), PvArray::new(&["s".into(), "STRING".into()]));
     }
 
     #[test]
     fn test_array_concat_unchanged2() {
-        let a = PvArray::new("s");
-        let b = PvArray::new("STRING");
-        assert_eq!(a.clone().concat(&b), PvArray::new("sSTRING"));
-        assert_eq!(a, PvArray::new("s"));
-        assert_eq!(b, PvArray::new("STRING"));
+        let a = PvArray::new(&["s".into()]);
+        let b = PvArray::new(&["STRING".into()]);
+        assert_eq!(a.clone().concat(&b), PvArray::new(&["s".into(), "STRING".into()]));
+        assert_eq!(a, PvArray::new(&["s".into()]));
+        assert_eq!(b, PvArray::new(&["STRING".into()]));
     }
 }
