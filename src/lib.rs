@@ -587,32 +587,32 @@ mod tests {
     }
 
     #[test]
-    fn test_str_empty_constructor() {
+    fn test_string_empty_constructor() {
         PvString::new_empty();
     }
 
     #[test]
-    fn test_str_empty_eq() {
+    fn test_string_empty_eq() {
         assert_eq!(PvString::new_empty(), PvString::new_empty());
     }
 
     #[test]
-    fn test_str_constructor() {
+    fn test_string_constructor() {
         PvString::new("string");
     }
 
     #[test]
-    fn test_str_eq() {
+    fn test_string_eq() {
         assert_eq!(PvString::new("string"), PvString::new("string"));
     }
 
     #[test]
-    fn test_str_concat() {
+    fn test_string_concat() {
         assert_eq!(PvString::new("string").concat(&PvString::new("STRING")), PvString::new("stringSTRING"));
     }
 
     #[test]
-    fn test_str_concat_unchanged() {
+    fn test_string_concat_unchanged() {
         let a = PvString::new("string");
         let b = PvString::new("STRING");
         assert_eq!(a.clone().concat(&b), PvString::new("stringSTRING"));
@@ -622,12 +622,12 @@ mod tests {
 
     // use the PvString::resize_move() path
     #[test]
-    fn test_str_concat2() {
+    fn test_string_concat2() {
         assert_eq!(PvString::new("s").concat(&PvString::new("STRING")), PvString::new("sSTRING"));
     }
 
     #[test]
-    fn test_str_concat_unchanged2() {
+    fn test_string_concat_unchanged2() {
         let a = PvString::new("s");
         let b = PvString::new("STRING");
         assert_eq!(a.clone().concat(&b), PvString::new("sSTRING"));
