@@ -237,17 +237,17 @@ struct PvArray {
 }
 
 impl PvArray {
-    // get a Layout that fits a PvArrayData with `size` bytes after it
+    // get a Layout that fits a PvArrayData with `size` Pv's after it
     fn get_layout(size: usize) -> std::alloc::Layout {
-        let layout = std::alloc::Layout::new::<PvArrayData>();
-        // no errors need to be handled
-        // the total size does not overflow isize (i'm assuming this one)
-        let (layout, _) = layout.extend(
-            // align (1) is not zero
-            // align (1) is a power of two
-            // size (size) does not overflow isize when rounded up to align (i'm assuming this one)
-            std::alloc::Layout::from_size_align(size, 1).unwrap()
-        ).unwrap();
+        let mut layout = std::alloc::Layout::new::<PvArrayData>();
+        // i'm not assuming nightly rust with std::alloc::Layout::repeat()
+        for _ in 0..size {
+            // no errors need to be handled
+            // the total size does not overflow isize (i'm assuming this one)
+            (layout, _) = layout.extend(
+                std::alloc::Layout::new::<Pv>()
+            ).unwrap();
+        }
         layout
     }
 
@@ -266,16 +266,16 @@ impl PvArray {
         PvArray::new_empty_sized(16) // any size would work
     }
 
-    pub fn new(str: &str) -> Self {
-        let out = PvArray::new_empty_sized(str.len() * 2); // any >= str.len()
+    pub fn new(pvs: &[Pv]) -> Self {
+        let out = PvArray::new_empty_sized(pvs.len() * 2); // any >= str.len()
         unsafe {
-            (*out.data).len = str.len();
+            (*out.data).len = pvs.len();
         }
-        out.get_data_mut().copy_from_slice(str.as_bytes());
+        out.get_data_mut().clone_from_slice(pvs);
         out
     }
 
-    // move one copy of this string out and resize its allocation
+    // move one copy of this array out and resize its allocation
     // will reuse the old allocation if possible
     unsafe fn resize_move(mut self, newsize: usize) -> Self {
         let data = *self.data;
@@ -295,42 +295,37 @@ impl PvArray {
         } else {
             let out = PvArray::new_empty_sized(newsize);
             (*out.data).len = data.len;
-            out.get_data_mut().copy_from_slice(self.get_data_mut());
+            out.get_data_mut().clone_from_slice(self.get_data_mut());
             out
         }
     }
 
-    // get a mutable slice reference to the string data
+    // get a mutable slice reference to the array data
     // only use when refcount = 1
-    fn get_data_mut(&self) -> &mut [u8] {
+    fn get_data_mut(&self) -> &mut [Pv] {
         let data = unsafe {*self.data};
 
         let layout = std::alloc::Layout::new::<PvArrayData>();
         // no errors need to be handled
         // the total size does not overflow isize (i'm assuming this one)
         let (_, offset) = layout.extend(
-            // align (1) is not zero
-            // align (1) is a power of two
-            // size (data.len) does not overflow usize when rounded up to align (i'm assuming this one)
-            std::alloc::Layout::from_size_align(data.len, 1).unwrap()
+            std::alloc::Layout::new::<Pv>()
         ).unwrap();
         // i could probably just get the size of layout
         // but just to be safe :)
 
         unsafe {
             std::slice::from_raw_parts_mut(
-                (self.data as *mut u8).add(offset),
+                (self.data as *mut u8).add(offset) as *mut Pv,
                 data.len
             )
         }
     }
 
-    // get an immutable reference to the string data
+    // get an immutable reference to the array data
     // only use when refcount = 1
-    fn get_str(&self) -> &str {
-        // maybe use std::str::from_utf8_unchecked()?
-        // (because the "only" way to get a PvArray is from a &str)
-        std::str::from_utf8(self.get_data_mut()).unwrap()
+    fn get_data(&self) -> &[Pv] {
+        self.get_data_mut()
     }
 
     pub fn concat(self, other: &PvArray) -> Self {
@@ -347,7 +342,25 @@ impl PvArray {
             (*s.data).len += otherdata.len;
         }
 
-        s.get_data_mut()[data.len..].copy_from_slice(other.get_data_mut());
+        s.get_data_mut()[data.len..].clone_from_slice(other.get_data_mut());
+
+        s
+    }
+
+    pub fn append(self, other: &Pv) -> Self {
+        let data = unsafe {*self.data};
+
+        let s = if data.refcount == 1 && data.alloc_size >= data.len + 1 {
+            self
+        } else {unsafe {
+            self.resize_move((data.len + 1) * 2)
+        }};
+
+        unsafe {
+            (*s.data).len += 1;
+        }
+
+        s.get_data_mut()[data.len] = other.clone();
 
         s
     }
@@ -373,7 +386,7 @@ impl Clone for PvArray {
 
 impl PartialEq for PvArray {
     fn eq(&self, other: &PvArray) -> bool {
-        self.get_str() == other.get_str()
+        self.get_data() == other.get_data()
     }
 }
 
@@ -620,5 +633,54 @@ mod tests {
         assert_eq!(a.clone().concat(&b), PvString::new("sSTRING"));
         assert_eq!(a, PvString::new("s"));
         assert_eq!(b, PvString::new("STRING"));
+    }
+
+    #[test]
+    fn test_array_empty_constructor() {
+        PvArray::new_empty();
+    }
+
+    #[test]
+    fn test_array_empty_eq() {
+        assert_eq!(PvArray::new_empty(), PvArray::new_empty());
+    }
+
+    #[test]
+    fn test_array_constructor() {
+        PvArray::new(["string"]);
+    }
+
+    #[test]
+    fn test_array_eq() {
+        assert_eq!(PvArray::new("string"), PvArray::new("string"));
+    }
+
+    #[test]
+    fn test_array_concat() {
+        assert_eq!(PvArray::new("string").concat(&PvArray::new("STRING")), PvArray::new("stringSTRING"));
+    }
+
+    #[test]
+    fn test_array_concat_unchanged() {
+        let a = PvArray::new("string");
+        let b = PvArray::new("STRING");
+        assert_eq!(a.clone().concat(&b), PvArray::new("stringSTRING"));
+        assert_eq!(a, PvArray::new("string"));
+        assert_eq!(b, PvArray::new("STRING"));
+    }
+
+    // use the PvArray::resize_move() path
+    #[test]
+    fn test_array_concat2() {
+        assert_eq!(PvArray::new("s").concat(&PvArray::new("STRING")), PvArray::new("sSTRING"));
+    }
+
+    #[test]
+    fn test_array_concat_unchanged2() {
+        let a = PvArray::new("s");
+        let b = PvArray::new("STRING");
+        assert_eq!(a.clone().concat(&b), PvArray::new("sSTRING"));
+        assert_eq!(a, PvArray::new("s"));
+        assert_eq!(b, PvArray::new("STRING"));
     }
 }
