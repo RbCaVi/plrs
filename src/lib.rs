@@ -189,9 +189,11 @@ impl PvString {
 
         let s = if data.refcount == 1 && data.alloc_size >= data.len + otherdata.len {
             self
-        } else {unsafe {
-            self.resize_move((data.len + otherdata.len) * 2)
-        }};
+        } else {
+            unsafe {
+                self.resize_move((data.len + otherdata.len) * 2)
+            }
+        };
 
         unsafe {
             (*s.data).len += otherdata.len;
