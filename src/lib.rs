@@ -724,6 +724,16 @@ mod tests {
     }
 
     #[test]
+    fn test_array_dbg() {
+        dbg!(PvArray::new(&["string".into()]));
+    }
+
+    #[test]
+    fn test_array_concat_empty() {
+        assert_eq!(PvArray::new(&["string".into()]).concat(&PvArray::new(&[])), PvArray::new(&["string".into()]));
+    }
+
+    #[test]
     fn test_array_concat() {
         assert_eq!(PvArray::new(&["string".into()]).concat(&PvArray::new(&["STRING".into()])), PvArray::new(&["string".into(), "STRING".into()]));
     }
