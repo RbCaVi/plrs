@@ -290,7 +290,7 @@ impl PvArray {
         layout
     }
 
-    // allocates enough space for `len` bytes of string
+    // allocates enough space for `len` array elements
     pub fn new_empty_sized(size: usize) -> Self {
         let layout = PvArray::get_layout(size);
 
