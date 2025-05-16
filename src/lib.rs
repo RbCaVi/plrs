@@ -484,7 +484,7 @@ impl<T> PvFixedSize<T> {
 
         let data = unsafe {std::alloc::alloc(layout)} as *mut PvFixedSizeData<T>;
 
-        unsafe {*data = PvFixedSizeData::<T> {refcount: 1, data: val};}
+        unsafe {std::ptr::write(data, PvFixedSizeData::<T> {refcount: 1, data: val});}
 
         PvFixedSize::<T> {data}
     }
