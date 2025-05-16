@@ -548,6 +548,33 @@ impl<T: PartialEq> PartialEq for PvFixedSize<T> {
     }
 }
 
+#[derive(Debug)]
+struct PrintOnDrop(usize);
+
+impl PrintOnDrop {
+    fn new() -> Self {
+        PrintOnDrop {0: 0}
+    }
+}
+
+impl Clone for PrintOnDrop {
+    fn clone(&self) -> Self {
+        PrintOnDrop {0: self.0 + 1}
+    }
+}
+
+impl Drop for PrintOnDrop {
+    fn drop(&mut self) {
+        println!("drop {}", self.0);
+    }
+}
+
+impl PartialEq for PrintOnDrop {
+    fn eq(&self, other: &PrintOnDrop) -> bool {
+        false
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 enum Pv {
     Invalid(PvInvalid),
@@ -556,6 +583,7 @@ enum Pv {
     Int(PvInt),
     String(PvString),
     Array(PvArray),
+    PrintOnDrop(PvFixedSize<PrintOnDrop>),
 }
 
 impl Pv {
@@ -573,6 +601,10 @@ impl Pv {
     
     pub fn int(value: isize) -> Self {
         Pv::Int(PvInt::new(value))
+    }
+    
+    pub fn pod() -> Self {
+        Pv::PrintOnDrop(PvFixedSize::<PrintOnDrop>::new(PrintOnDrop::new()))
     }
 }
 
@@ -844,5 +876,12 @@ mod tests {
         assert_eq!(a.clone().concat(&b), PvArray::new(&["s".into(), "STRING".into()]));
         assert_eq!(a, PvArray::new(&["s".into()]));
         assert_eq!(b, PvArray::new(&["STRING".into()]));
+    }
+
+    #[test]
+    fn test_pod() {
+        let a = Pv::pod();
+        let b = a.clone();
+        panic!();
     }
 }
