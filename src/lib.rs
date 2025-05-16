@@ -881,7 +881,15 @@ mod tests {
     #[test]
     fn test_pod() {
         let a = Pv::pod();
+        dbg!(a);
+        let a = Pv::pod();
         let b = a.clone();
+        if let Pv::PrintOnDrop(a) = &a {
+            let c = a.clone().move_out();
+            dbg!(c);
+        }
+        dbg!(a);
+        dbg!(b);
         panic!();
     }
 }
