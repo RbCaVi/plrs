@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone)]
 struct PvInvalid;
 
 impl PvInvalid {
@@ -7,7 +7,7 @@ impl PvInvalid {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone)]
 struct PvNull;
 
 impl PvNull {
@@ -16,7 +16,7 @@ impl PvNull {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone)]
 struct PvBool(bool);
 
 impl PvBool {
@@ -31,7 +31,7 @@ impl From<bool> for PvBool {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone)]
 struct PvInt(isize);
 
 impl PvInt {
@@ -238,6 +238,12 @@ impl Clone for PvString {
 impl PartialEq for PvString {
     fn eq(&self, other: &PvString) -> bool {
         self.get_str() == other.get_str()
+    }
+}
+
+impl std::hash::Hash for PvString {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.get_str().hash(state);
     }
 }
 
@@ -452,6 +458,12 @@ impl PartialEq for PvArray {
     }
 }
 
+impl std::hash::Hash for PvArray {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.get_data().hash(state);
+    }
+}
+
 impl From<&[Pv]> for PvArray {
     fn from(value: &[Pv]) -> Self {
         PvArray::new(value)
@@ -550,12 +562,28 @@ impl<T: PartialEq> PartialEq for PvFixedSize<T> {
     }
 }
 
+impl<T: Eq> Eq for PvFixedSize<T> {}
+
+impl<T: std::hash::Hash> std::hash::Hash for PvFixedSize<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.get_data().hash(state);
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Clone)]
 struct PvObject {
     data: PvFixedSize<std::collections::HashMap<Pv, Pv>>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+impl std::hash::Hash for PvObject {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // you know what
+        // i'm going to deal with this "later"
+        panic!("Tried to hash unhashable type PvObject.");
+    }
+}
+
+#[derive(Hash, Eq, PartialEq, Debug, Clone)]
 enum Pv {
     Invalid(PvInvalid),
     Null(PvNull),
