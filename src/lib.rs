@@ -1,4 +1,4 @@
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 struct PvInvalid;
 
 impl PvInvalid {
@@ -7,7 +7,7 @@ impl PvInvalid {
     }
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 struct PvNull;
 
 impl PvNull {
@@ -16,7 +16,7 @@ impl PvNull {
     }
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 struct PvBool(bool);
 
 impl PvBool {
@@ -31,7 +31,7 @@ impl From<bool> for PvBool {
     }
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 struct PvInt(isize);
 
 impl PvInt {
@@ -82,6 +82,7 @@ struct PvStringData {
     alloc_size: usize,
 }
 
+#[derive(Eq)]
 struct PvString {
     data: *mut PvStringData,
 }
@@ -261,6 +262,7 @@ struct PvArrayData {
     alloc_size: usize,
 }
 
+#[derive(Eq)]
 struct PvArray {
     data: *mut PvArrayData,
 }
@@ -548,34 +550,12 @@ impl<T: PartialEq> PartialEq for PvFixedSize<T> {
     }
 }
 
-#[derive(Debug)]
-struct PrintOnDrop(usize);
-
-impl PrintOnDrop {
-    fn new() -> Self {
-        PrintOnDrop {0: 0}
-    }
+#[derive(Eq, PartialEq, Debug, Clone)]
+struct PvObject {
+    data: PvFixedSize<std::collections::HashMap<Pv, Pv>>,
 }
 
-impl Clone for PrintOnDrop {
-    fn clone(&self) -> Self {
-        PrintOnDrop {0: self.0 + 1}
-    }
-}
-
-impl Drop for PrintOnDrop {
-    fn drop(&mut self) {
-        println!("drop {}", self.0);
-    }
-}
-
-impl PartialEq for PrintOnDrop {
-    fn eq(&self, other: &PrintOnDrop) -> bool {
-        false
-    }
-}
-
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 enum Pv {
     Invalid(PvInvalid),
     Null(PvNull),
@@ -583,7 +563,7 @@ enum Pv {
     Int(PvInt),
     String(PvString),
     Array(PvArray),
-    PrintOnDrop(PvFixedSize<PrintOnDrop>),
+    Object(PvObject),
 }
 
 impl Pv {
@@ -601,10 +581,6 @@ impl Pv {
     
     pub fn int(value: isize) -> Self {
         Pv::Int(PvInt::new(value))
-    }
-    
-    pub fn pod() -> Self {
-        Pv::PrintOnDrop(PvFixedSize::<PrintOnDrop>::new(PrintOnDrop::new()))
     }
 }
 
@@ -876,20 +852,5 @@ mod tests {
         assert_eq!(a.clone().concat(&b), PvArray::new(&["s".into(), "STRING".into()]));
         assert_eq!(a, PvArray::new(&["s".into()]));
         assert_eq!(b, PvArray::new(&["STRING".into()]));
-    }
-
-    #[test]
-    fn test_pod() {
-        let a = Pv::pod();
-        dbg!(a);
-        let a = Pv::pod();
-        let b = a.clone();
-        if let Pv::PrintOnDrop(a) = &a {
-            let c = a.clone().move_out();
-            dbg!(c);
-        }
-        dbg!(a);
-        dbg!(b);
-        panic!();
     }
 }
