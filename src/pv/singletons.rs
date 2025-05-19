@@ -63,3 +63,35 @@ pvint_op_impl!(Sub sub);
 pvint_op_impl!(Mul mul);
 pvint_op_impl!(Div div);
 pvint_op_impl!(Rem rem);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // the most pointless tests known to mankind
+    #[test]
+    fn test_invalid() {
+        assert_eq!(PvInvalid::new(), PvInvalid);
+    }
+
+    #[test]
+    fn test_null() {
+        assert_eq!(PvNull::new(), PvNull);
+    }
+
+    #[test]
+    fn test_bool() {
+        assert_eq!(PvBool::new(true), PvBool(true));
+    }
+
+    #[test]
+    fn test_int() {
+        assert_eq!(PvInt::new(15), PvInt(15));
+    }
+
+    // real
+    #[test]
+    fn test_int_add() {
+        assert_eq!(PvInt::new(15) + PvInt::new(3), PvInt::new(18));
+    }
+}
