@@ -508,9 +508,25 @@ impl<T: std::hash::Hash> std::hash::Hash for PvFixedSize<T> {
     }
 }
 
+impl<T> From<T> for PvFixedSize<T> {
+    fn from(value: T) -> Self {
+        PvFixedSize::<T>::new(value)
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct PvObject {
     data: PvFixedSize<std::collections::HashMap<Pv, Pv>>,
+}
+
+impl PvObject {
+    pub fn new_empty() -> Self {
+        PvObject::new(std::collections::HashMap::new())
+    }
+
+    pub fn new(data: std::collections::HashMap<Pv, Pv>) -> Self {
+        PvObject {data: data.into()}
+    }
 }
 
 impl std::hash::Hash for PvObject {
@@ -547,6 +563,14 @@ impl Pv {
     
     pub fn int(value: isize) -> Self {
         Pv::Int(PvInt::new(value))
+    }
+    
+    pub fn array() -> Self {
+        Pv::Array(PvArray::new_empty())
+    }
+    
+    pub fn object() -> Self {
+        Pv::Object(PvObject::new_empty())
     }
 }
 
