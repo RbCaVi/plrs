@@ -17,7 +17,9 @@ impl PvObject {
     }
 }
 
+// death implementation for now to satisfy rust
 impl std::hash::Hash for PvObject {
+    #[allow(unused_variables)] // remove this line when this gets implemented
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         // you know what
         // i'm going to deal with this "later"
