@@ -1,21 +1,12 @@
-mod singletons;
-
-pub use singletons::{PvInvalid, PvNull, PvBool, PvInt};
-
 mod private;
-
-use private::{incref, decref, PvFixedSize};
-
+mod singletons;
 mod string;
-
-pub use string::PvString;
-
 mod array;
-
-pub use array::PvArray;
-
 mod object;
 
+pub use singletons::{PvInvalid, PvNull, PvBool, PvInt};
+pub use string::PvString;
+pub use array::PvArray;
 pub use object::PvObject;
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone)]
