@@ -1,4 +1,4 @@
-use crate::pv::private::{incref, decref, PvFixedSize};
+use crate::pv::private::PvFixedSize;
 
 use crate::pv::Pv;
 
