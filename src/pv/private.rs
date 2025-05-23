@@ -130,7 +130,7 @@ struct PvArrayData {
 }
 
 #[derive(Eq)]
-pub struct PvArray<T> {
+pub struct PvpArray<T> {
     data: *mut PvArrayData,
     _data: std::marker::PhantomData<[T]>,
 }
@@ -145,7 +145,7 @@ macro_rules! clone_to_uninit {
     )
 }
 
-impl<T> PvArray<T> {
+impl<T> PvpArray<T> {
     // get a Layout that fits a PvArrayData with `size` T's after it
     fn get_layout(size: usize) -> std::alloc::Layout {
         let mut layout = std::alloc::Layout::new::<PvArrayData>();
@@ -162,17 +162,17 @@ impl<T> PvArray<T> {
 
     // allocates enough space for `len` array elements
     pub fn new_empty_sized(size: usize) -> Self {
-        let layout = PvArray::<T>::get_layout(size);
+        let layout = PvpArray::<T>::get_layout(size);
 
         let data = unsafe {std::alloc::alloc(layout)} as *mut PvArrayData;
 
         unsafe {*data = PvArrayData {refcount: 1, len: 0, alloc_size: size};}
 
-        PvArray::<T> {data, _data: std::marker::PhantomData}
+        PvpArray::<T> {data, _data: std::marker::PhantomData}
     }
 
     pub fn new_empty() -> Self {
-        PvArray::<T>::new_empty_sized(16) // any size would work
+        PvpArray::<T>::new_empty_sized(16) // any size would work
     }
 
     // get a mutable slice reference to the array data
@@ -204,9 +204,9 @@ impl<T> PvArray<T> {
     }
 }
 
-impl<T: Clone> PvArray<T> {
+impl<T: Clone> PvpArray<T> {
     pub fn new(pvs: &[T]) -> Self {
-        let out = PvArray::<T>::new_empty_sized(pvs.len() * 2); // any >= str.len()
+        let out = PvpArray::<T>::new_empty_sized(pvs.len() * 2); // any >= str.len()
         unsafe {
             (*out.data).len = pvs.len();
         }
@@ -224,9 +224,9 @@ impl<T: Clone> PvArray<T> {
         if data.refcount == 1 {
             assert!(newsize >= data.len); // just a suggestion
 
-            let oldlayout = PvArray::<T>::get_layout(data.alloc_size);
+            let oldlayout = PvpArray::<T>::get_layout(data.alloc_size);
 
-            let newlayout = PvArray::<T>::get_layout(newsize);
+            let newlayout = PvpArray::<T>::get_layout(newsize);
             
             self.data = std::alloc::realloc(self.data as *mut u8, oldlayout, newlayout.size()) as *mut PvArrayData;
 
@@ -234,7 +234,7 @@ impl<T: Clone> PvArray<T> {
 
             self
         } else {
-            let out = PvArray::<T>::new_empty_sized(newsize);
+            let out = PvpArray::<T>::new_empty_sized(newsize);
             (*out.data).len = data.len;
             clone_to_uninit!(self.get_data(), out.get_data_mut(), 0, data.len);
             out
@@ -259,7 +259,7 @@ impl<T: Clone> PvArray<T> {
         s
     }
 
-    pub fn concat(self, other: &PvArray<T>) -> Self {
+    pub fn concat(self, other: &PvpArray<T>) -> Self {
         let data = unsafe {*self.data};
         let otherdata = unsafe {*other.data};
 
@@ -279,7 +279,7 @@ impl<T: Clone> PvArray<T> {
     }
 }
 
-impl<T: std::fmt::Debug> PvArray<T> {
+impl<T: std::fmt::Debug> PvpArray<T> {
     // for Debug implementation
     pub fn fmt(&self, f: &mut std::fmt::Formatter<'_>, typename: &str) -> std::fmt::Result {
         let data = unsafe {*self.data};
@@ -291,11 +291,11 @@ impl<T: std::fmt::Debug> PvArray<T> {
     }
 }
 
-impl<T> Drop for PvArray<T> {
+impl<T> Drop for PvpArray<T> {
     fn drop(&mut self) {
         if (decref!(self)) {
             let size = unsafe {(*self.data).alloc_size};
-            let layout = PvArray::<T>::get_layout(size);
+            let layout = PvpArray::<T>::get_layout(size);
 
             for mval in self.get_data_mut() {
                 // take the value (run its destructor)
@@ -310,35 +310,27 @@ impl<T> Drop for PvArray<T> {
     }
 }
 
-impl<T> Clone for PvArray<T> {
+impl<T> Clone for PvpArray<T> {
     fn clone(&self) -> Self {
         incref!(self);
-        PvArray {data: self.data, _data: std::marker::PhantomData}
+        PvpArray {data: self.data, _data: std::marker::PhantomData}
     }
 }
 
-impl<T: PartialEq> PartialEq for PvArray<T> {
-    fn eq(&self, other: &PvArray<T>) -> bool {
+impl<T: PartialEq> PartialEq for PvpArray<T> {
+    fn eq(&self, other: &PvpArray<T>) -> bool {
         self.get_data() == other.get_data()
     }
 }
 
-impl<T: std::hash::Hash> std::hash::Hash for PvArray<T> {
+impl<T: std::hash::Hash> std::hash::Hash for PvpArray<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.get_data().hash(state);
     }
 }
 
-impl<T: Clone> From<&[T]> for PvArray<T> {
+impl<T: Clone> From<&[T]> for PvpArray<T> {
     fn from(value: &[T]) -> Self {
-        PvArray::new(value)
-    }
-}
-
-impl<T: Clone> std::ops::Add<&PvArray<T>> for PvArray<T> {
-    type Output = Self;
-
-    fn add(self, other: &PvArray<T>) -> Self {
-        self.concat(other)
+        PvpArray::new(value)
     }
 }
