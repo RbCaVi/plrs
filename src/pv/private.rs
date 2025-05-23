@@ -39,13 +39,13 @@ impl<T> PvFixedSize<T> {
 
     // get a mutable slice reference to the array data
     // only use when refcount = 1
-    fn get_data_mut(&self) -> &mut T {
+    pub fn get_data_mut(&self) -> &mut T {
         unsafe {&mut (*self.data).data}
     }
 
     // get an immutable reference to the array data
     // only use when refcount = 1
-    fn get_data(&self) -> &T {
+    pub fn get_data(&self) -> &T {
         self.get_data_mut()
     }
 }
@@ -53,11 +53,23 @@ impl<T> PvFixedSize<T> {
 impl<T: Clone> PvFixedSize<T> {
     // move one copy of this value out
     // will reuse the old allocation if possible
-    fn move_out(self) -> Self {
+    pub fn move_out(self) -> Self {
         if unsafe {(*self.data).refcount} == 1 {
             self
         } else {
             PvFixedSize::<T>::new(self.get_data().clone())
+        }
+    }
+}
+
+impl<T: Copy> PvFixedSize<T> {
+    // move one copy of this value out
+    // will reuse the old allocation if possible
+    pub fn copy_out(self) -> Self {
+        if unsafe {(*self.data).refcount} == 1 {
+            self
+        } else {
+            PvFixedSize::<T>::new(*self.get_data())
         }
     }
 }
