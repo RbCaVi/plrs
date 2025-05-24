@@ -1,3 +1,3 @@
-mod pv;
+pub mod pv;
 
-//use pv::{PvInvalid, PvNull, PvBool, PvInt, PvString, PvArray, PvObject, Pv};
+pub use pv::{PvInvalid, PvNull, PvBool, PvInt, PvString, PvArray, PvObject, Pv};
