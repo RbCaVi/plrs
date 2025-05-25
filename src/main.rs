@@ -1,3 +1,7 @@
+use plrs::{PlInstruction, PlState};
+
 fn main() {
-	unimplemented!();
+	let mut state = PlState::new([PlInstruction::Hey, PlInstruction::ReturnNull]);
+
+	dbg!(state.execute());
 }

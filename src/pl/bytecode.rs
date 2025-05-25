@@ -15,8 +15,8 @@ pub struct PlState {
 }
 
 impl PlState {
-	pub fn new(bytecode: Rc<[PlInstruction]>) -> Self {
-		PlState {bytecode, instruction_counter: 0}
+	pub fn new<const N: usize>(bytecode: [PlInstruction; N]) -> Self {
+		PlState {bytecode: Rc::from(bytecode), instruction_counter: 0}
 	}
 
 	// execute one instruction
