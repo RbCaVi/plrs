@@ -8,6 +8,7 @@ pub struct PvBytes {
 // all of these methods are inherited from PvpArray
 // i can't just say "pub type PvBytes = PvpArray<u8>;"
 // because string generic parameters are not allowed
+// and i want a custom name for Debug
 impl PvBytes {
     // allocates enough space for `len` array elements
     pub fn new_empty_sized(size: usize) -> Self {
@@ -26,7 +27,7 @@ impl PvBytes {
         self.data.concat(&other.data).into()
     }
 
-    pub fn append(self, other: &u8) -> Self {
+    pub fn append(self, other: u8) -> Self {
         self.data.append(other).into()
     }
 }

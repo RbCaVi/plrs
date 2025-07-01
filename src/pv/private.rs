@@ -241,7 +241,7 @@ impl<T: Clone> PvpArray<T> {
         }
     }
 
-    pub fn append(self, other: &T) -> Self {
+    pub fn append(self, other: T) -> Self {
         let data = unsafe {*self.data};
 
         let s = if data.refcount == 1 && data.alloc_size >= data.len + 1 {
@@ -254,7 +254,7 @@ impl<T: Clone> PvpArray<T> {
             (*s.data).len += 1;
         }
 
-        s.get_data_mut()[data.len].write(other.clone());
+        s.get_data_mut()[data.len].write(other);
 
         s
     }
