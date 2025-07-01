@@ -202,6 +202,10 @@ impl<T> PvpArray<T> {
     fn get_data(&self) -> &[T] {
         unsafe {std::mem::transmute::<_, _>(self.get_data_mut())}
     }
+
+    pub fn len(&self) -> usize {
+        unsafe {*self.data}.len
+    }
 }
 
 impl<T: Clone> PvpArray<T> {
@@ -276,6 +280,50 @@ impl<T: Clone> PvpArray<T> {
         clone_to_uninit!(other.get_data(), s.get_data_mut(), data.len, otherdata.len);
 
         s
+    }
+
+    pub fn pop(self) -> Self {
+        let data = unsafe {*self.data};
+
+        let s = if data.refcount == 1 {
+            self
+        } else {unsafe {
+            self.resize_move(data.alloc_size)
+        }};
+
+
+        unsafe {
+            // drop the last element
+            s.get_data_mut()[data.len - 1].assume_init_drop();
+            (*s.data).len -= 1;
+        }
+
+        s
+    }
+
+    pub fn popn(self, n: usize) -> Self {
+        let data = unsafe {*self.data};
+
+        let s = if data.refcount == 1 {
+            self
+        } else {unsafe {
+            self.resize_move(data.alloc_size)
+        }};
+
+        unsafe {
+            // drop the last n elements
+            for i in data.len - n..data.len {
+                s.get_data_mut()[i].assume_init_drop();
+            }
+
+            (*s.data).len -= n;
+        }
+
+        s
+    }
+
+    pub fn get(&self, i: usize) -> T {
+        self.get_data()[i].clone()
     }
 }
 
