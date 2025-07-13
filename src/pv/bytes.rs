@@ -27,7 +27,7 @@ impl PvBytes {
         self.data.concat(&other.data).into()
     }
 
-    pub fn append(self, other: u8) -> Self {
+    pub fn append(&mut self, other: u8) {
         self.data.append(other).into()
     }
 }

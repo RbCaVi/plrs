@@ -29,27 +29,22 @@ impl PlStack {
         PlStack {data: PvpArray::<PlStackElement>::new_empty(), topframe: -1}
     }
 
-    pub fn push(self, other: Pv) -> Self {
-        PlStack {
-            data: self.data.append(PlStackElement::Value(other)),
-            topframe: self.topframe,
-        }
+    pub fn push(&mut self, other: Pv) {
+        self.data.append(PlStackElement::Value(other));
     }
 
-    pub fn push_frame(self, retaddr: PlInstructionPointer) -> Self {
+    pub fn push_frame(&mut self, retaddr: PlInstructionPointer) {
         let topframe = self.data.len();
-        PlStack {
-            data: self.data.append(PlStackElement::Frame(PlStackFrame {
-                retaddr,
-                lastframe: self.topframe,
-            })),
-            topframe: topframe.try_into().unwrap(),
-        }
+        self.data.append(PlStackElement::Frame(PlStackFrame {
+            retaddr,
+            lastframe: self.topframe,
+        }));
+        self.topframe = topframe.try_into().unwrap();
     }
 
-    pub fn pop(self) -> Self {
+    pub fn pop(&mut self) {
         if let PlStackElement::Value(_) = self.topelement() {
-            PlStack {data: self.data.pop(), topframe: self.topframe}
+            self.data.pop();
         } else {
             panic!("can't pop a stack frame :/");
         }

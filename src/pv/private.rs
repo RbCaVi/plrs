@@ -243,85 +243,65 @@ impl<T: Clone> PvpArray<T> {
         }
     }
 
-    pub fn append(mut self, other: T) -> Self {
+    pub fn append(&mut self, other: T) {
         let data = unsafe {*self.data};
 
-        let s = if data.refcount == 1 && data.alloc_size >= data.len + 1 {
-            self
-        } else {unsafe {
+        if data.refcount > 1 || data.alloc_size < data.len + 1 {unsafe {
             self.resize_move((data.len + 1) * 2);
-            self
         }};
 
         unsafe {
-            (*s.data).len += 1;
+            (*self.data).len += 1;
         }
 
-        s.get_data_mut()[data.len].write(other);
-
-        s
+        self.get_data_mut()[data.len].write(other);
     }
 
-    pub fn concat(mut self, other: &PvpArray<T>) -> Self {
+    pub fn concat(&mut self, other: &PvpArray<T>) {
         let data = unsafe {*self.data};
         let otherdata = unsafe {*other.data};
 
-        let s = if data.refcount == 1 && data.alloc_size >= data.len + otherdata.len {
-            self
-        } else {unsafe {
+        if data.refcount > 1 && data.alloc_size < data.len + otherdata.len {unsafe {
             self.resize_move((data.len + otherdata.len) * 2);
-            self
         }};
 
         unsafe {
-            (*s.data).len += otherdata.len;
+            (*self.data).len += otherdata.len;
         }
 
-        clone_to_uninit!(other.get_data(), s.get_data_mut(), data.len, otherdata.len);
-
-        s
+        clone_to_uninit!(other.get_data(), self.get_data_mut(), data.len, otherdata.len);
     }
 
-    pub fn pop(mut self) -> Self {
+    pub fn pop(&mut self) {
         let data = unsafe {*self.data};
 
-        let s = if data.refcount == 1 {
-            self
-        } else {unsafe {
+        if data.refcount > 1 {unsafe {
             self.resize_move(data.alloc_size);
-            self
         }};
 
 
         unsafe {
             // drop the last element
-            s.get_data_mut()[data.len - 1].assume_init_drop();
-            (*s.data).len -= 1;
+            self.get_data_mut()[data.len - 1].assume_init_drop();
+            (*self.data).len -= 1;
         }
-
-        s
     }
 
-    pub fn popn(mut self, n: usize) -> Self {
+    pub fn popn(&mut self, n: usize) {
         let data = unsafe {*self.data};
 
-        let s = if data.refcount == 1 {
-            self
-        } else {unsafe {
+        if data.refcount > 1 {unsafe {
             self.resize_move(data.alloc_size);
-            self
         }};
 
         unsafe {
             // drop the last n elements
             for i in data.len - n..data.len {
-                s.get_data_mut()[i].assume_init_drop();
+                self.get_data_mut()[i].assume_init_drop();
             }
 
-            (*s.data).len -= n;
+            (*self.data).len -= n;
         }
-
-        s
     }
 
     pub fn get(&self, i: usize) -> T {

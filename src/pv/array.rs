@@ -25,12 +25,12 @@ impl PvArray {
         PvpArray::<Pv>::new(pvs).into()
     }
 
-    pub fn concat(self, other: &PvArray) -> Self {
-        self.data.concat(&other.data).into()
+    pub fn concat(&mut self, other: &PvArray) {
+        self.data.concat(&other.data)
     }
 
-    pub fn append(self, other: Pv) -> Self {
-        self.data.append(other).into()
+    pub fn append(&mut self, other: Pv) {
+        self.data.append(other)
     }
 }
 
@@ -55,7 +55,8 @@ impl From<PvpArray<Pv>> for PvArray {
 impl std::ops::Add<&PvArray> for PvArray {
     type Output = Self;
 
-    fn add(self, other: &PvArray) -> Self {
-        self.concat(other)
+    fn add(mut self, other: &PvArray) -> Self {
+        self.concat(other);
+        self
     }
 }
