@@ -222,7 +222,7 @@ impl<T: Clone> PvpArray<T> {
 
     // move one copy of this array out and resize its allocation
     // will reuse the old allocation if possible
-    unsafe fn resize_move(mut self, newsize: usize) -> Self {
+    unsafe fn resize_move(&mut self, newsize: usize) {
         let data = *self.data;
 
         if data.refcount == 1 {
@@ -235,23 +235,22 @@ impl<T: Clone> PvpArray<T> {
             self.data = std::alloc::realloc(self.data as *mut u8, oldlayout, newlayout.size()) as *mut PvArrayData;
 
             (*self.data).alloc_size = newsize;
-
-            self
         } else {
             let out = PvpArray::<T>::new_empty_sized(newsize);
             (*out.data).len = data.len;
             clone_to_uninit!(self.get_data(), out.get_data_mut(), 0, data.len);
-            out
+            *self = out
         }
     }
 
-    pub fn append(self, other: T) -> Self {
+    pub fn append(mut self, other: T) -> Self {
         let data = unsafe {*self.data};
 
         let s = if data.refcount == 1 && data.alloc_size >= data.len + 1 {
             self
         } else {unsafe {
-            self.resize_move((data.len + 1) * 2)
+            self.resize_move((data.len + 1) * 2);
+            self
         }};
 
         unsafe {
@@ -263,14 +262,15 @@ impl<T: Clone> PvpArray<T> {
         s
     }
 
-    pub fn concat(self, other: &PvpArray<T>) -> Self {
+    pub fn concat(mut self, other: &PvpArray<T>) -> Self {
         let data = unsafe {*self.data};
         let otherdata = unsafe {*other.data};
 
         let s = if data.refcount == 1 && data.alloc_size >= data.len + otherdata.len {
             self
         } else {unsafe {
-            self.resize_move((data.len + otherdata.len) * 2)
+            self.resize_move((data.len + otherdata.len) * 2);
+            self
         }};
 
         unsafe {
@@ -282,13 +282,14 @@ impl<T: Clone> PvpArray<T> {
         s
     }
 
-    pub fn pop(self) -> Self {
+    pub fn pop(mut self) -> Self {
         let data = unsafe {*self.data};
 
         let s = if data.refcount == 1 {
             self
         } else {unsafe {
-            self.resize_move(data.alloc_size)
+            self.resize_move(data.alloc_size);
+            self
         }};
 
 
@@ -301,13 +302,14 @@ impl<T: Clone> PvpArray<T> {
         s
     }
 
-    pub fn popn(self, n: usize) -> Self {
+    pub fn popn(mut self, n: usize) -> Self {
         let data = unsafe {*self.data};
 
         let s = if data.refcount == 1 {
             self
         } else {unsafe {
-            self.resize_move(data.alloc_size)
+            self.resize_move(data.alloc_size);
+            self
         }};
 
         unsafe {
