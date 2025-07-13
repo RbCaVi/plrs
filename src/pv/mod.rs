@@ -1,4 +1,4 @@
-mod private;
+pub mod private; // maybe rename this to implementation?
 mod singletons;
 mod string;
 mod array;
