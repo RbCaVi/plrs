@@ -2,27 +2,55 @@ use std::rc::Rc;
 
 use crate::pv::Pv;
 
+#[derive(Copy, Clone, Debug)]
 pub enum PlInstruction {
 	Nop,
 	Hey,
-	Jump(u32),
+	Jump(isize),
 	ReturnNull,
 }
 
-pub struct PlState {
+#[derive(Clone, Debug)]
+pub struct PlInstructionPointer {
 	bytecode: Rc<[PlInstruction]>,
-	instruction_counter: u32,
+	counter: isize,
+}
+
+impl PlInstructionPointer {
+	fn new<const N: usize>(bytecode: [PlInstruction; N]) -> Self {
+		PlInstructionPointer {bytecode: Rc::from(bytecode), counter: 0}
+	}
+
+	fn get(&self) -> PlInstruction {
+		return self.bytecode[<isize as TryInto<usize>>::try_into(self.counter).unwrap()]
+	}
+}
+
+impl std::ops::AddAssign<isize> for PlInstructionPointer {
+	fn add_assign(&mut self, n: isize) {
+		self.counter += n;
+	}
+}
+
+impl std::ops::AddAssign<&isize> for PlInstructionPointer {
+	fn add_assign(&mut self, n: &isize) {
+		self.counter += n;
+	}
+}
+
+pub struct PlState {
+	instruction_pointer: PlInstructionPointer,
 }
 
 impl PlState {
 	pub fn new<const N: usize>(bytecode: [PlInstruction; N]) -> Self {
-		PlState {bytecode: Rc::from(bytecode), instruction_counter: 0}
+		PlState {instruction_pointer: PlInstructionPointer::new(bytecode)}
 	}
 
 	// execute one instruction
 	pub fn executeone(&mut self) -> Option<Pv> {
-		let instruction = &self.bytecode[self.instruction_counter as usize];
-		self.instruction_counter += 1;
+		let instruction = self.instruction_pointer.get();
+		self.instruction_pointer += 1;
 		match instruction {
 			PlInstruction::Nop => None,
 			PlInstruction::Hey => {
@@ -30,7 +58,7 @@ impl PlState {
 				None
 			},
 			PlInstruction::Jump(offset) => {
-				self.instruction_counter += offset;
+				self.instruction_pointer += offset;
 				None
 			},
 			PlInstruction::ReturnNull => {
