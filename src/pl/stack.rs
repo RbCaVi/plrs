@@ -25,7 +25,7 @@ pub struct PlStack {
 }
 
 impl PlStack {
-    pub fn new_empty() -> Self {
+    pub fn new() -> Self {
         PlStack {data: PvpArray::<PlStackElement>::new_empty(), topframe: -1}
     }
 

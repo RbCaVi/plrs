@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::pv::Pv;
+use crate::pl::stack::PlStack;
 
 #[derive(Copy, Clone, Debug)]
 pub enum PlInstruction {
@@ -8,6 +9,8 @@ pub enum PlInstruction {
 	Hey,
 	Jump(isize),
 	ReturnNull,
+	PushInt(isize),
+	PrintTop,
 }
 
 #[derive(Clone, Debug)]
@@ -40,11 +43,15 @@ impl std::ops::AddAssign<&isize> for PlInstructionPointer {
 
 pub struct PlState {
 	instruction_pointer: PlInstructionPointer,
+	stack: PlStack,
 }
 
 impl PlState {
 	pub fn new<const N: usize>(bytecode: [PlInstruction; N]) -> Self {
-		PlState {instruction_pointer: PlInstructionPointer::new(bytecode)}
+		PlState {
+			instruction_pointer: PlInstructionPointer::new(bytecode),
+			stack: PlStack::new(),
+		}
 	}
 
 	// execute one instruction
@@ -63,6 +70,14 @@ impl PlState {
 			},
 			PlInstruction::ReturnNull => {
 				Some(Pv::null())
+			},
+			PlInstruction::PushInt(n) => {
+				self.stack.push(Pv::int(n));
+				None
+			},
+			PlInstruction::PrintTop => {
+				dbg!(self.stack.top());
+				None
 			},
 		}
 	}
