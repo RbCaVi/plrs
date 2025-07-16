@@ -8,9 +8,11 @@ pub enum PlInstruction {
 	Nop,
 	Hey,
 	Jump(isize),
-	ReturnNull,
+	Return,
 	PushInt(isize),
+	PushNull,
 	PrintTop,
+	Debug,
 }
 
 #[derive(Clone, Debug)]
@@ -68,15 +70,23 @@ impl PlState {
 				self.instruction_pointer += offset;
 				None
 			},
-			PlInstruction::ReturnNull => {
-				Some(Pv::null())
+			PlInstruction::Return => {
+				Some(self.stack.top())
 			},
 			PlInstruction::PushInt(n) => {
 				self.stack.push(Pv::int(n));
 				None
 			},
+			PlInstruction::PushNull => {
+				self.stack.push(Pv::null());
+				None
+			},
 			PlInstruction::PrintTop => {
 				dbg!(self.stack.top());
+				None
+			},
+			PlInstruction::Debug => {
+				dbg!(&self.stack);
 				None
 			},
 		}

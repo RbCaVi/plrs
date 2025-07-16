@@ -7,7 +7,8 @@ fn main() {
 		PlInstruction::PrintTop,
 		PlInstruction::PushInt(3),
 		PlInstruction::PrintTop,
-		PlInstruction::ReturnNull
+		PlInstruction::Debug,
+		PlInstruction::Return,
 	]);
 
 	dbg!(state.execute());
