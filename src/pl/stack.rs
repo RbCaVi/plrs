@@ -50,6 +50,20 @@ impl PlStack {
         }
     }
 
+    pub fn pop_frame(&mut self) -> Option<PlInstructionPointer> {
+        if self.topframe == -1 {
+            return None;
+        }
+        let frame = self.data.get(self.topframe.try_into().unwrap());
+        if let PlStackElement::Frame(frame) = frame {
+            self.data.popn(self.data.len() - <isize as TryInto<usize>>::try_into(self.topframe).unwrap());
+            self.topframe = frame.lastframe;
+            return Some(frame.retaddr);
+        } else {
+            panic!("can't pop a non stack frame :/");
+        }
+    }
+
     pub fn top(&self) -> Pv {
         if let PlStackElement::Value(v) = self.topelement() {
             v

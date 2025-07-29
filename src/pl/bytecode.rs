@@ -13,6 +13,8 @@ pub enum PlInstruction {
 	PushNull,
 	PrintTop,
 	Debug,
+	PushFrame,
+	PopFrame,
 }
 
 #[derive(Clone, Debug)]
@@ -87,6 +89,14 @@ impl PlState {
 			},
 			PlInstruction::Debug => {
 				dbg!(&self.stack);
+				None
+			},
+			PlInstruction::PushFrame => {
+				self.stack.push_frame(self.instruction_pointer.clone());
+				None
+			},
+			PlInstruction::PopFrame => {
+				dbg!(self.stack.pop_frame());
 				None
 			},
 		}
